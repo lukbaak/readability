@@ -2091,6 +2091,38 @@ Readability.prototype = {
     }
     return textContent;
   },
+  
+  _BLOCK_ELEMENTS: new Set([
+    "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "CAPTION", "DETAILS", "DIALOG", "DD",
+    "DIV", "DL", "DT", "FIELDSET", "FIGCAPTION", "FIGURE", "FOOTER", "FORM",
+    "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HGROUP", "HR", "LI", "MAIN",
+    "NAV", "OL", "P", "PRE", "SECTION", "SUMMARY", "TABLE", "TBODY", "TD", "TFOOT", "TH",
+    "THEAD", "TR", "UL",
+  ]),
+
+  _getTextContent(node) {
+    var text = "";
+    if (node.nodeType === this.TEXT_NODE) {
+      return node.textContent;
+    }
+    if (node.nodeType !== this.ELEMENT_NODE) {
+      return "";
+    }
+    if (node.tagName === "BR") {
+      return "\n";
+    }
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var child = node.childNodes[i];
+      text += this._getTextContent(child);
+      if (
+        child.nodeType === this.ELEMENT_NODE &&
+        this._BLOCK_ELEMENTS.has(child.tagName)
+      ) {
+        text += "\n";
+      }
+    }
+    return text;
+  },
 
   /**
    * Get the number of times a string s appears in the node e.
@@ -2789,7 +2821,11 @@ Readability.prototype = {
       }
     }
 
-    var textContent = articleContent.textContent;
+    var textContent = this._getTextContent(articleContent)
+      .replace(/[ \t]*\n[ \t]*/g, "\n")
+      .replace(/\n{2,}/g, "\n")
+      .replace(this.REGEXPS.normalize, " ")
+      .trim();
     return {
       title: this._articleTitle,
       byline: metadata.byline || this._articleByline,
